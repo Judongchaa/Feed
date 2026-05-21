@@ -1,0 +1,43 @@
+settings:
+  data_dir: "./rss_data"
+  refresh_interval_minutes: 60
+
+feeds:
+  - name: "Hacker News"
+    url: "https://hnrss.org/frontpage"
+    tag: "News"
+    subtag: "Code"
+  - name: "Lobste.rs"
+    url: "https://lobste.rs/rss"
+    tag: "News"
+    subtag: "Code"
+  - name: "Ars Technica"
+    url: "https://feeds.arstechnica.com/arstechnica/index"
+    tag: "News"
+    subtag: "Code"
+  - name: "The Verge"
+    url: "https://www.theverge.com/rss/index.xml"
+    tag: "News"
+    subtag: "Code"
+
+  - name: BBC
+    url: http://feeds.bbci.co.uk/news/world/rss.xml
+    tag: "News"
+    subtag: "World"
+  - name: Guardian
+    url: https://www.theguardian.com/world/rss
+    tag: "News"
+    subtag: "World"
+  - name: NYT
+    url: https://rss.nytimes.com/services/xml/rss/nyt/World.xml
+    tag: "News"
+    subtag: "World"
+
+  - name: "IP"
+    url: "https://rss.draghetti.it/ilpost.xml"
+    tag: "News"
+    subtag: "Italy"
+  - name: "LS"
+    url: "https://rss.draghetti.it/lastampa.xml"
+    tag: "News"
+    subtag: "Italy"

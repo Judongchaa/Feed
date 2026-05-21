@@ -1,0 +1,6 @@
+textual
+feedparser
+PyYAML
+httpx
+markdownify
+python-slugify
