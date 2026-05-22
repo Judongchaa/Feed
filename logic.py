@@ -7,6 +7,7 @@ from markdownify import markdownify as md
 from slugify import slugify
 import yaml
 from models import FeedConfig, AppConfig
+from addon_manager import manager as addon_manager
 
 async def fetch_feed(url: str):
     async with httpx.AsyncClient() as client:
@@ -17,6 +18,11 @@ def sanitize_filename(name: str) -> str:
     return slugify(name)
 
 def save_entry(entry: dict, feed_config: FeedConfig, data_dir: str) -> bool:
+    # Check if an addon handles this tag
+    addon = addon_manager.get_addon_for_tag(feed_config.tag, feed_config.subtag)
+    if addon and hasattr(addon, 'save_entry'):
+        return addon.save_entry(entry, feed_config, data_dir)
+
     # Prepare directory
     target_dir = Path(data_dir) / feed_config.tag
     if feed_config.subtag:

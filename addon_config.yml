@@ -1,0 +1,9 @@
+addons:
+  youtube:
+    enabled: true
+    tags: 
+      - "Youtube"
+  news_code:
+    enabled: true
+    tags:
+      - "News/Code"

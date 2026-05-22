@@ -40,4 +40,105 @@ feeds:
   - name: "LS"
     url: "https://rss.draghetti.it/lastampa.xml"
     tag: "News"
-    subtag: "Italy"
+    subtag: Italy
+
+  - name: "Salvatore Sanfilippo"
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULFDDG9vOcmgwlslJJpCWjqOg
+    subtag: "CS"
+    tag: "Youtube" 
+  - name: "Enkk"
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULFvGwatHyCegYsG_y09qH1zw
+    subtag: "CS"
+    tag: "Youtube" 
+  - name: "Morro"
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULFnDDucQDLncrauOCmanCIgw
+    subtag: "CS"
+    tag: "Youtube" 
+  - name: "Jeff"
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULFR-DXc1voovS8nhAvccRZhg
+    subtag: "CS"
+    tag: "Youtube" 
+  - name: "Chuck"
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULF9x0AN7BWHpCDHSm9NiJFJQ
+    subtag: "CS"
+    tag: "Youtube" 
+  - name: "Esadecimale"
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULFqZe2cxQNCvgkQxUuqsIaig
+    subtag: "CS"
+    tag: "Youtube" 
+  
+  - name: Mr. Rip
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULFBOtZaVafz_5OmUrqJAVStQ
+    subtag: Finance
+    tag: Youtube
+  - name: Ascani
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULFS5PaGnSnFUnrjSc80XRnqw
+    subtag: Finance
+    tag: Youtube
+
+  - name: Riccardo
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULFIdYIrInVnUwHVbogLj6bqA
+    subtag: Tech
+    tag: Youtube
+  - name: "Saddy"
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULF6bbMapc0TnAj2yQuxZxo4Q
+    subtag: "Tech"
+    tag: "Youtube" 
+  - name: "Linus"
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULFXuqSBlHAE6Xw-yeJA0Tunw
+    subtag: "Tech"
+    tag: "Youtube" 
+
+  - name: MVVBlog
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULFKzaFqpSVNmFxiOLTqZmv9Q
+    subtag: Svago
+    tag: "Youtube"
+  - name: Molteni
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULFN7x37T8InfV3DINfYKvOQQ
+    subtag: Svago
+    tag: "Youtube"
+  - name: QDSS
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULF_eA572lBzVkpXhoeWnqSKQ
+    subtag: Svago
+    tag: "Youtube"
+  - name: Jumbo1
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULF8ic5XK5upbff8Zeyr6wt4A
+    subtag: Svago
+    tag: "Youtube"
+  - name: Jumbo2
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULFivs5Y_-JtVR6vQdguLeIUw
+    subtag: Svago
+    tag: "Youtube"
+  - name: Marcin Plaza
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULFVMu_hv7V77PGt0tGF46nNw
+    subtag: Svago
+    tag: Youtube
+  - name: Jakidale
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULFz-KJn98sMCPW5kjG0ZnE-Q
+    subtag: Svago
+    tag: Youtube
+
+  - name: Dario
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULFK7HfpKpTTrYE5fCgTP2hWg
+    subtag: Arte
+    tag: "Youtube"
+  - name: Giancula
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULFA0jagHWVAiWNpB4Q6WMDTw
+    subtag: Arte
+    tag: "Youtube"
+  - name: Abbozzo
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULFi6dJ7U2iHn5m8LkXQtu2xA
+    subtag: Arte
+    tag: "Youtube"
+  - name: Doricchi
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULF1n3D6P_wqbdquphy4nbDyg
+    subtag: Arte
+    tag: "Youtube"
+  - name: 151eg
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULFwH61O10Jc1TyVLeaA5np3Q
+    subtag: Arte
+    tag: "Youtube"
+  - name: Klaus
+    url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULFv9mVb-ptWuKznMUu1yZb_g
+    subtag: Arte
+    tag: "Youtube"

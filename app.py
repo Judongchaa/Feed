@@ -9,72 +9,14 @@ import yaml
 
 from models import AppConfig, FeedConfig
 from logic import update_all_feeds
+from addon_manager import manager as addon_manager
 
 class FilteredDirectoryTree(DirectoryTree):
     """A DirectoryTree that only shows directories."""
     def filter_paths(self, paths: list[Path]) -> list[Path]:
         return [path for path in paths if path.is_dir()]
 
-class ArticleItem(ListItem):
-    """An item in the article list."""
-    SOURCE_COLORS = [
-        "#ff5555", "#50fa7b", "#f1fa8c", "#bd93f9", "#ff79c6",
-        "#8be9fd", "#ffb86c", "#ff9580", "#9580ff", "#80ffea"
-    ]
-
-    def __init__(self, path: Path):
-        super().__init__()
-        self.path = path
-        self.title = path.stem.replace("_", " ").title()
-        self.date = ""
-        self.feed_name = ""
-        self.is_read = False
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                content = f.read()
-                if content.startswith("---"):
-                    parts = content.split("---")
-                    if len(parts) >= 3:
-                        meta = yaml.safe_load(parts[1])
-                        self.title = meta.get("title", self.title)
-                        self.date = meta.get("date", "")
-                        self.feed_name = meta.get("feed", "Unknown")
-                        self.is_read = meta.get("read", False)
-        except:
-            pass
-        
-        # Determine source color based on feed name hash
-        color_idx = hash(self.feed_name) % len(self.SOURCE_COLORS)
-        self.source_color = self.SOURCE_COLORS[color_idx]
-
-    def compose(self) -> ComposeResult:
-        yield Label("●", id="dot", classes="read" if self.is_read else "unread")
-        yield Label(f"[{self.source_color}]{self.feed_name}[/] - ", id="source")
-        yield Label(self.title, id="title", classes="read" if self.is_read else "unread")
-        yield Label(self.date, id="date")
-
-    def mark_as_read(self):
-        if not self.is_read:
-            self.is_read = True
-            self.query_one("#dot").add_class("read")
-            self.query_one("#dot").remove_class("unread")
-            self.query_one("#title").add_class("read")
-            self.query_one("#title").remove_class("unread")
-            self.query_one("#source").add_class("read")
-            
-            # Update the file
-            try:
-                with open(self.path, "r", encoding="utf-8") as f:
-                    content = f.read()
-                if content.startswith("---"):
-                    parts = content.split("---")
-                    meta = yaml.safe_load(parts[1])
-                    meta["read"] = True
-                    new_content = "---\n" + yaml.safe_dump(meta) + "---\n" + "---".join(parts[2:])
-                    with open(self.path, "w", encoding="utf-8") as f:
-                        f.write(new_content)
-            except:
-                pass
+from ui_components import ArticleItem, LoadMoreItem
 
 class AddFeedScreen(ModalScreen):
     """Screen for adding a new feed."""
@@ -231,6 +173,26 @@ class FeedApp(App):
         text-style: bold;
     }
 
+    LoadMoreItem {
+        layout: horizontal;
+        padding: 0 1;
+        height: 1;
+        background: transparent;
+        border: none;
+        content-align: center middle;
+    }
+
+    LoadMoreItem.--highlight {
+        background: $selection-bg;
+    }
+
+    .load-more-label {
+        color: $accent;
+        text-style: bold;
+        width: 100%;
+        content-align: center middle;
+    }
+
     #article-reader {
         height: 100%;
         overflow-y: scroll;
@@ -306,6 +268,7 @@ class FeedApp(App):
         ("escape", "back", "Back"),
         ("left", "focus_sidebar", "Focus Sidebar"),
         ("right", "focus_content", "Focus Content"),
+        ("+", "load_more", "Load More"),
     ]
 
     def action_focus_sidebar(self) -> None:
@@ -320,11 +283,22 @@ class FeedApp(App):
         else:
             self.query_one("#article-reader").focus()
 
+    def action_load_more(self) -> None:
+        """Load more articles when pressing +."""
+        switcher = self.query_one("#content-area", ContentSwitcher)
+        if switcher.current == "article-list":
+            self.current_limit += 50
+            list_view = self.query_one("#article-list", ListView)
+            idx = list_view.index
+            self.refresh_article_list()
+            list_view.index = idx
+
     def __init__(self):
         super().__init__()
         self.config = AppConfig.load()
         Path(self.config.data_dir).mkdir(parents=True, exist_ok=True)
         self.current_dir = Path(self.config.data_dir)
+        self.current_limit = 50
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -341,6 +315,7 @@ class FeedApp(App):
     def on_directory_tree_directory_selected(self, event: DirectoryTree.DirectorySelected) -> None:
         """Called when a directory is selected in the Sidebar."""
         self.current_dir = event.path
+        self.current_limit = 50
         self.refresh_article_list()
         self.query_one("#content-area", ContentSwitcher).current = "article-list"
 
@@ -349,32 +324,75 @@ class FeedApp(App):
         list_view = self.query_one("#article-list", ListView)
         list_view.clear()
         
-        md_files = list(self.current_dir.glob("*.md"))
-        items_with_dates = []
-        
-        for path in md_files:
-            item = ArticleItem(path)
-            # Parse DD/MM/YYYY HH:mm for sorting
-            sort_key = ""
+        try:
+            rel_path = self.current_dir.relative_to(Path(self.config.data_dir).resolve())
+            parts = rel_path.parts
+            tag = parts[0] if len(parts) > 0 else ""
+            subtag = parts[1] if len(parts) > 1 else ""
+        except ValueError:
             try:
-                # Expecting "DD/MM/YYYY HH:mm"
-                date_part, time_part = item.date.split(" ")
-                day, month, year = date_part.split("/")
-                sort_key = f"{year}-{month}-{day} {time_part}"
-            except:
-                sort_key = item.date
-            items_with_dates.append((item, sort_key))
+                rel_path = self.current_dir.relative_to(Path(self.config.data_dir))
+                parts = rel_path.parts
+                tag = parts[0] if len(parts) > 0 else ""
+                subtag = parts[1] if len(parts) > 1 else ""
+            except ValueError:
+                tag, subtag = "", ""
+
+        addon = addon_manager.get_addon_for_tag(tag, subtag)
+        if addon and hasattr(addon, 'load_articles'):
+            # Pass limit to the addon
+            items_with_dates = addon.load_articles(self.current_dir, tag, subtag, limit=self.current_limit)
+            has_more = len(items_with_dates) == self.current_limit
+        else:
+            md_files = list(self.current_dir.glob("*.md"))
+            # Sort files by name descending to get the newest first (since names start with YYYY-MM-DD)
+            md_files.sort(key=lambda p: p.name, reverse=True)
+            
+            has_more = len(md_files) > self.current_limit
+            # Limit items
+            md_files = md_files[:self.current_limit]
+            
+            items_with_dates = []
+            
+            for path in md_files:
+                item = ArticleItem(path)
+                # Parse DD/MM/YYYY HH:mm for sorting
+                sort_key = ""
+                try:
+                    # Expecting "DD/MM/YYYY HH:mm"
+                    date_part, time_part = item.date.split(" ")
+                    day, month, year = date_part.split("/")
+                    sort_key = f"{year}-{month}-{day} {time_part}"
+                except:
+                    sort_key = item.date
+                items_with_dates.append((item, sort_key))
 
         # Sort descending by date string
         items_with_dates.sort(key=lambda x: x[1], reverse=True)
         
         for item, _ in items_with_dates:
             list_view.append(item)
+            
+        if has_more:
+            list_view.append(LoadMoreItem())
 
     @on(ListView.Selected)
     def on_article_selected(self, event: ListView.Selected) -> None:
         """Called when an article is selected from the list."""
-        if isinstance(event.item, ArticleItem):
+        if isinstance(event.item, LoadMoreItem):
+            self.current_limit += 50
+            # Save current scroll index so we can restore focus/scroll
+            list_view = self.query_one("#article-list", ListView)
+            idx = list_view.index
+            self.refresh_article_list()
+            # Textual will reset index on clear(), so we manually set it to where the "Load more" button was
+            list_view.index = idx
+            return
+
+        if hasattr(event.item, 'on_select'):
+            event.item.mark_as_read()
+            event.item.on_select()
+        elif isinstance(event.item, ArticleItem):
             try:
                 event.item.mark_as_read()
                 with open(event.item.path, "r", encoding="utf-8") as f:
