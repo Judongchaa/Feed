@@ -68,3 +68,23 @@ class ArticleItem(ListItem):
                         f.write(new_content)
             except:
                 pass
+
+from textual.widgets import DirectoryTree, Markdown
+
+class FilteredDirectoryTree(DirectoryTree):
+    """A DirectoryTree that only shows directories."""
+    def filter_paths(self, paths: list[Path]) -> list[Path]:
+        return [path for path in paths if path.is_dir()]
+
+from textual.binding import Binding
+
+class FocusableMarkdown(Markdown, can_focus=True):
+    """A Markdown widget that can receive focus to allow keyboard scrolling."""
+    BINDINGS = [
+        Binding("up", "scroll_up", "Scroll Up", show=False),
+        Binding("down", "scroll_down", "Scroll Down", show=False),
+        Binding("j", "scroll_down", "Scroll Down", show=False),
+        Binding("k", "scroll_up", "Scroll Up", show=False),
+        Binding("pageup", "page_up", "Page Up", show=False),
+        Binding("pagedown", "page_down", "Page Down", show=False),
+    ]

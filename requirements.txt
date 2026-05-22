@@ -4,3 +4,4 @@ PyYAML
 httpx
 markdownify
 python-slugify
+yt-dlp

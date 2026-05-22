@@ -23,39 +23,34 @@ The `feed` command is a wrapper script located in `~/.local/bin/feed`. It automa
 
 ```text
 Feed/
-├── app.py           # Main Entry Point & TUI Implementation
-├── logic.py         # Business Logic (Fetching, Parsing, Saving)
-├── models.py        # Data Models & Configuration Management
+├── app.py           # Main Entry Point
+├── core/            # Business Logic & Config
+│   ├── logic.py         # Fetching, Parsing, Saving
+│   ├── config.py        # Data Models & Configuration Management
+│   └── addon_manager.py # Plugin system loader
+├── ui/              # User Interface (Textual)
+│   ├── main_window.py   # FeedApp class and layout
+│   ├── screens.py       # AddFeedScreen modal
+│   ├── widgets.py       # Custom lists and tree components
+│   └── styles.tcss      # External CSS Stylesheet
+├── addons/          # User-defined Addons
+│   ├── youtube.py       # Custom YouTube viewer and SQLite storage
+│   └── news_code.py     # Custom News/Code link opener
+├── addon_config.yml # Addon Configuration
 ├── config.yml       # Subscription & Settings Configuration
 ├── requirements.txt # Project Dependencies
 └── rss_data/        # Local Database (Auto-generated)
-    └── [Tag]/
-        └── [Subtag]/
-            └── [YYYY-MM-DD]_[Feed]_[Title].md
 ```
 
 ### Components
 
-- **`app.py`**: 
-    - Implements the `FeedApp` class using Textual.
-    - Manages the layout (Header, Sidebar, Content, Footer).
-    - Handles UI events like file selection, button clicks, and keyboard shortcuts (`u` for update, `a` for add).
-    - Uses a `DirectoryTree` for navigation and a `Markdown` widget for reading.
-
-- **`logic.py`**:
-    - **Fetch Worker**: Asynchronously retrieves XML data from feed URLs.
-    - **Parser**: Extracts titles, authors, and content using `feedparser`.
-    - **Sanitization**: Uses `python-slugify` to create safe, cross-platform filenames.
-    - **Converter**: Transforms HTML content into clean Markdown using `markdownify`.
-    - **Storage**: Writes files with YAML frontmatter for metadata compatibility with other tools (like Obsidian).
-
-- **`models.py`**:
-    - Defines `FeedConfig` and `AppConfig` dataclasses.
-    - Handles serialization/deserialization to `config.yml` using `PyYAML`.
-
-- **`config.yml`**:
-    - The source of truth for the application.
-    - Stores the `data_dir` location and the list of subscribed feeds with their respective tags and subtags.
+- **`app.py`**: The simple entry point that launches the Textual `FeedApp`.
+- **`core/`**:
+    - **`logic.py`**: Asynchronously retrieves XML data, converts HTML to Markdown, and handles saving logic.
+    - **`config.py`**: Defines `FeedConfig` and `AppConfig` and handles serialization.
+    - **`addon_manager.py`**: Dynamically loads external python scripts from `addons/`.
+- **`ui/`**: Contains the decoupled Textual presentation layer (`main_window`, `screens`, `widgets`, and `styles.tcss`).
+- **`addons/`**: Custom python scripts that hook into the application's read and write pipelines for specific tags or subtags.
 
 ## Application Logic
 

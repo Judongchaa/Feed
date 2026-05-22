@@ -4,14 +4,16 @@ from pathlib import Path
 from datetime import datetime
 from textual.widgets import ListItem, Label
 from textual.app import ComposeResult
+import yt_dlp
 
 def get_db_path(data_dir: str, tag: str, subtag: str) -> Path:
     target_dir = Path(data_dir) / tag
     target_dir.mkdir(parents=True, exist_ok=True)
     if subtag:
-        # Create an empty directory for the subtag so the DirectoryTree displays it
         (target_dir / subtag).mkdir(exist_ok=True)
-    db_name = f"youtube_{subtag}.db" if subtag else "youtube.db"
+        db_name = f"yt_suggestions_{subtag}.db"
+    else:
+        db_name = "yt_suggestions.db"
     return target_dir / db_name
 
 def init_db(db_path: Path):
@@ -32,46 +34,7 @@ def init_db(db_path: Path):
     conn.commit()
     conn.close()
 
-def save_entry(entry: dict, feed_config, data_dir: str) -> bool:
-    db_path = get_db_path(data_dir, feed_config.tag, feed_config.subtag)
-    init_db(db_path)
-    
-    title = entry.get("title", "No Title")
-    url = entry.get("link", "")
-    
-    dt = None
-    if "published_parsed" in entry and entry.published_parsed:
-        dt = datetime(*entry.published_parsed[:6])
-    else:
-        dt = datetime.now()
-        
-    formatted_date = dt.strftime("%d/%m/%Y %H:%M")
-    sort_date = dt.strftime("%Y-%m-%d %H:%M:%S")
-    
-    conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    
-    # Check if exists
-    c.execute("SELECT id FROM entries WHERE url = ?", (url,))
-    if c.fetchone():
-        conn.close()
-        return False
-        
-    c.execute('''
-        INSERT INTO entries (feed_name, title, url, date, sort_date)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (feed_config.name, title, url, formatted_date, sort_date))
-    
-    conn.commit()
-    conn.close()
-    return True
-
-class YoutubeArticleItem(ListItem):
-    SOURCE_COLORS = [
-        "#ff5555", "#50fa7b", "#f1fa8c", "#bd93f9", "#ff79c6",
-        "#8be9fd", "#ffb86c", "#ff9580", "#9580ff", "#80ffea"
-    ]
-
+class YoutubeSuggestionItem(ListItem):
     def __init__(self, db_path: Path, entry_id: int, feed_name: str, title: str, url: str, date: str, is_read: bool, sort_date: str):
         super().__init__()
         self.db_path = db_path
@@ -82,14 +45,10 @@ class YoutubeArticleItem(ListItem):
         self.date = date
         self.is_read = is_read
         self.sort_date = sort_date
-        
-        color_idx = hash(self.feed_name) % len(self.SOURCE_COLORS)
-        self.source_color = self.SOURCE_COLORS[color_idx]
 
     def compose(self) -> ComposeResult:
-        yield Label(f"[{self.source_color}]{self.feed_name}[/]", id="source")
+        yield Label(f"[#ffb86c]{self.feed_name}[/]", id="source")
         yield Label(self.title, id="title", classes="read" if self.is_read else "unread")
-        yield Label(self.date, id="date")
 
     def mark_as_read(self):
         if not self.is_read:
@@ -106,14 +65,88 @@ class YoutubeArticleItem(ListItem):
             conn.close()
             
     def on_select(self):
-        # Open in browser
         webbrowser.open(self.url)
+
+def update_feeds(data_dir: str, tag: str, subtag: str) -> int:
+    """Run yt-dlp to fetch the YouTube homepage suggestions and save to SQLite."""
+    db_path = get_db_path(data_dir, tag, subtag)
+    init_db(db_path)
+    
+    import subprocess
+    import json
+    import urllib.request
+    
+    cmd = [
+        "yt-dlp",
+        "--cookies-from-browser", "firefox",
+        "--flat-playlist",
+        "--dump-json",
+        "--playlist-end", "50",
+        "https://www.youtube.com/"
+    ]
+    
+    new_count = 0
+    now = datetime.now()
+    formatted_date = now.strftime("%d/%m/%Y %H:%M")
+    sort_date = now.strftime("%Y-%m-%d %H:%M:%S")
+
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    
+    # Clear old suggestions so the list only reflects the current homepage
+    c.execute("DELETE FROM entries")
+
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        for line in result.stdout.strip().split('\n'):
+            if not line: continue
+            try:
+                entry = json.loads(line)
+                title = entry.get('title', 'Unknown Title')
+                url = entry.get('url', '')
+                uploader = entry.get('uploader')
+                
+                if not url: continue
+                
+                if not uploader:
+                    # Use oEmbed to fetch the channel name quickly since flat extraction often skips it
+                    try:
+                        req_url = f"https://www.youtube.com/oembed?url={url}&format=json"
+                        with urllib.request.urlopen(req_url) as response:
+                            oembed_data = json.loads(response.read().decode())
+                            uploader = oembed_data.get('author_name')
+                    except Exception:
+                        pass
+                        
+                if not uploader:
+                    uploader = 'YouTube'
+                
+                # Check if exists
+                c.execute("SELECT id FROM entries WHERE url = ?", (url,))
+                if not c.fetchone():
+                    c.execute('''
+                        INSERT INTO entries (feed_name, title, url, date, sort_date)
+                        VALUES (?, ?, ?, ?, ?)
+                    ''', (uploader, title, url, formatted_date, sort_date))
+                    new_count += 1
+            except Exception:
+                pass
+    except Exception as e:
+        print(f"Error fetching YouTube suggestions: {e}")
+
+    conn.commit()
+    conn.close()
+    
+    return new_count
 
 def load_articles(current_dir: Path, tag: str, subtag: str, limit: int = 50):
     if subtag:
-        db_paths = [current_dir.parent / f"youtube_{subtag}.db"]
+        db_paths = [current_dir.parent / f"yt_suggestions_{subtag}.db"]
     else:
-        db_paths = list(current_dir.glob("youtube_*.db"))
+        db_paths = list(current_dir.glob("yt_suggestions_*.db"))
+        # If no subtag, also include yt_suggestions.db if it exists
+        if (current_dir / "yt_suggestions.db").exists():
+            db_paths.append(current_dir / "yt_suggestions.db")
         
     items = []
     for db_path in db_paths:
@@ -122,7 +155,6 @@ def load_articles(current_dir: Path, tag: str, subtag: str, limit: int = 50):
             
         conn = sqlite3.connect(db_path)
         c = conn.cursor()
-        # Check if table exists
         c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='entries'")
         if not c.fetchone():
             conn.close()
@@ -133,7 +165,7 @@ def load_articles(current_dir: Path, tag: str, subtag: str, limit: int = 50):
         conn.close()
         
         for row in rows:
-            item = YoutubeArticleItem(
+            item = YoutubeSuggestionItem(
                 db_path=db_path,
                 entry_id=row[0],
                 feed_name=row[1],
@@ -145,16 +177,15 @@ def load_articles(current_dir: Path, tag: str, subtag: str, limit: int = 50):
             )
             items.append((item, item.sort_date))
             
-    # Sort combined results descending
     items.sort(key=lambda x: x[1], reverse=True)
-    
-    # Return up to limit items overall to prevent huge lists when combining tags
     return items[:limit]
 
 def search_articles(current_dir: Path, query: str, limit: int = 50):
-    db_paths = list(current_dir.glob("youtube_*.db"))
+    db_paths = list(current_dir.glob("yt_suggestions_*.db"))
+    if (current_dir / "yt_suggestions.db").exists():
+        db_paths.append(current_dir / "yt_suggestions.db")
+        
     items = []
-    
     for db_path in db_paths:
         if not db_path.exists():
             continue
@@ -171,7 +202,7 @@ def search_articles(current_dir: Path, query: str, limit: int = 50):
         conn.close()
         
         for row in rows:
-            item = YoutubeArticleItem(
+            item = YoutubeSuggestionItem(
                 db_path=db_path,
                 entry_id=row[0],
                 feed_name=row[1],

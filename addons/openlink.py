@@ -1,5 +1,5 @@
 from pathlib import Path
-from ui_components import ArticleItem
+from ui.widgets import ArticleItem
 import yaml
 import webbrowser
 import re
@@ -53,3 +53,29 @@ def load_articles(current_dir: Path, tag: str, subtag: str, limit: int = 50):
         
     items_with_dates.sort(key=lambda x: x[1], reverse=True)
     return items_with_dates
+
+from slugify import slugify
+
+def search_articles(current_dir: Path, query: str, limit: int = 50):
+    md_files = list(current_dir.glob("*.md"))
+    slug_query = slugify(query).lower()
+    query = query.lower()
+    
+    items_with_dates = []
+    for path in md_files:
+        name_lower = path.name.lower()
+        if query in name_lower or slug_query in name_lower:
+            item = CodeArticleItem(path)
+                
+            sort_key = ""
+            try:
+                date_part, time_part = item.date.split(" ")
+                day, month, year = date_part.split("/")
+                sort_key = f"{year}-{month}-{day} {time_part}"
+            except:
+                sort_key = item.date
+                
+            items_with_dates.append((item, sort_key))
+            
+    items_with_dates.sort(key=lambda x: x[1], reverse=True)
+    return items_with_dates[:limit]

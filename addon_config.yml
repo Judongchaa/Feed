@@ -3,7 +3,12 @@ addons:
     enabled: true
     tags: 
       - "Youtube"
-  news_code:
+  openlink:
     enabled: true
     tags:
       - "News/Code"
+      - "News/World"
+  yt_suggest:
+    enabled: true
+    tags:
+      - "Youtube/Suggestions"
