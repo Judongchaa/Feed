@@ -117,6 +117,8 @@ def update_feeds(data_dir: str, tag: str, subtag: str) -> int:
             conn = sqlite3.connect(db_path)
             c = conn.cursor()
             
+            last_valid_dt = None
+            
             for m in messages:
                 text_div = m.find('div', class_='tgme_widget_message_text')
                 time_tag = m.find('time')
@@ -140,16 +142,21 @@ def update_feeds(data_dir: str, tag: str, subtag: str) -> int:
                 telegram_link = link_tag['href'] if link_tag else ""
                 
                 # Format dates
-                now = datetime.now()
-                formatted_date = now.strftime("%d/%m/%Y %H:%M")
-                sort_date = now.strftime("%Y-%m-%d %H:%M:%S")
+                if last_valid_dt:
+                    dt = last_valid_dt
+                else:
+                    dt = datetime.now()
+                    
+                formatted_date = dt.strftime("%d/%m/%Y %H:%M")
+                sort_date = dt.strftime("%Y-%m-%d %H:%M:%S")
                 
                 if time_tag and time_tag.has_attr('datetime'):
                     try:
                         # e.g. "2026-05-22T12:34:52+00:00"
-                        dt = datetime.fromisoformat(time_tag['datetime'].replace('Z', '+00:00'))
-                        formatted_date = dt.strftime("%d/%m/%Y %H:%M")
-                        sort_date = dt.strftime("%Y-%m-%d %H:%M:%S")
+                        parsed_dt = datetime.fromisoformat(time_tag['datetime'].replace('Z', '+00:00'))
+                        formatted_date = parsed_dt.strftime("%d/%m/%Y %H:%M")
+                        sort_date = parsed_dt.strftime("%Y-%m-%d %H:%M:%S")
+                        last_valid_dt = parsed_dt
                     except Exception:
                         pass
                         
@@ -164,6 +171,7 @@ def update_feeds(data_dir: str, tag: str, subtag: str) -> int:
                 new_count += 1
                 
             conn.commit()
+
             conn.close()
         except Exception as e:
             print(f"Error fetching telegram web preview {feed.url}: {e}")
