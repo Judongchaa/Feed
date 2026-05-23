@@ -5,6 +5,21 @@ from datetime import datetime
 from textual.widgets import ListItem, Label
 from textual.app import ComposeResult
 import yt_dlp
+import logging
+logger = logging.getLogger("yt_suggest")
+
+def _setup_logger():
+    if not getattr(logger, "setup_done", False):
+        from core.addon_manager import manager
+        addon_config = manager.addons_config.get("yt_suggest", {})
+        if addon_config.get("logging", False):
+            logger.setLevel(logging.INFO)
+            fh = logging.FileHandler(manager.addons_dir / "yt_suggest.log")
+            fh.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+            logger.addHandler(fh)
+        else:
+            logger.addHandler(logging.NullHandler())
+        logger.setup_done = True
 
 def get_db_path(data_dir: str, tag: str, subtag: str) -> Path:
     target_dir = Path(data_dir) / tag
@@ -69,21 +84,24 @@ class YoutubeSuggestionItem(ListItem):
 
 def update_feeds(data_dir: str, tag: str, subtag: str) -> int:
     """Run yt-dlp to fetch the YouTube homepage suggestions and save to SQLite."""
+    _setup_logger()
     db_path = get_db_path(data_dir, tag, subtag)
     init_db(db_path)
     
-    import subprocess
     import json
     import urllib.request
+    from core.addon_manager import manager
     
-    cmd = [
-        "yt-dlp",
-        "--cookies-from-browser", "firefox",
-        "--flat-playlist",
-        "--dump-json",
-        "--playlist-end", "50",
-        "https://www.youtube.com/"
-    ]
+    addon_config = manager.addons_config.get("yt_suggest", {})
+    browser = addon_config.get("browser", "firefox")
+    
+    ydl_opts = {
+        'extract_flat': 'in_playlist',
+        'dump_single_json': True,
+        'playlistend': 50,
+        'cookiesfrombrowser': (browser,),
+        'quiet': True,
+    }
     
     new_count = 0
     now = datetime.now()
@@ -95,48 +113,54 @@ def update_feeds(data_dir: str, tag: str, subtag: str) -> int:
     
     # Clear old suggestions so the list only reflects the current homepage
     c.execute("DELETE FROM entries")
+    
+    logger.info(f"Starting YouTube suggestions fetch using browser: {browser}")
 
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        for line in result.stdout.strip().split('\n'):
-            if not line: continue
-            try:
-                entry = json.loads(line)
-                title = entry.get('title', 'Unknown Title')
-                url = entry.get('url', '')
-                uploader = entry.get('uploader')
-                
-                if not url: continue
-                
-                if not uploader:
-                    # Use oEmbed to fetch the channel name quickly since flat extraction often skips it
-                    try:
-                        req_url = f"https://www.youtube.com/oembed?url={url}&format=json"
-                        with urllib.request.urlopen(req_url) as response:
-                            oembed_data = json.loads(response.read().decode())
-                            uploader = oembed_data.get('author_name')
-                    except Exception:
-                        pass
-                        
-                if not uploader:
-                    uploader = 'YouTube'
-                
-                # Check if exists
-                c.execute("SELECT id FROM entries WHERE url = ?", (url,))
-                if not c.fetchone():
-                    c.execute('''
-                        INSERT INTO entries (feed_name, title, url, date, sort_date)
-                        VALUES (?, ?, ?, ?, ?)
-                    ''', (uploader, title, url, formatted_date, sort_date))
-                    new_count += 1
-            except Exception:
-                pass
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            result = ydl.extract_info("https://www.youtube.com/", download=False)
+            
+            entries = result.get('entries', [])
+            for entry in entries:
+                if not entry: continue
+                try:
+                    title = entry.get('title', 'Unknown Title')
+                    url = entry.get('url', '')
+                    uploader = entry.get('uploader')
+                    
+                    if not url: continue
+                    
+                    if not uploader:
+                        # Use oEmbed to fetch the channel name quickly since flat extraction often skips it
+                        try:
+                            req_url = f"https://www.youtube.com/oembed?url={url}&format=json"
+                            with urllib.request.urlopen(req_url) as response:
+                                oembed_data = json.loads(response.read().decode())
+                                uploader = oembed_data.get('author_name')
+                        except Exception as e:
+                            logger.debug(f"oEmbed fetch failed for {url}: {e}")
+                            
+                    if not uploader:
+                        uploader = 'YouTube'
+                    
+                    # Check if exists
+                    c.execute("SELECT id FROM entries WHERE url = ?", (url,))
+                    if not c.fetchone():
+                        c.execute('''
+                            INSERT INTO entries (feed_name, title, url, date, sort_date)
+                            VALUES (?, ?, ?, ?, ?)
+                        ''', (uploader, title, url, formatted_date, sort_date))
+                        new_count += 1
+                except Exception as e:
+                    logger.error(f"Error parsing entry {url}: {e}")
     except Exception as e:
+        logger.error(f"Error fetching YouTube suggestions: {e}")
         print(f"Error fetching YouTube suggestions: {e}")
 
     conn.commit()
     conn.close()
     
+    logger.info(f"Finished fetching suggestions. New entries: {new_count}")
     return new_count
 
 def load_articles(current_dir: Path, tag: str, subtag: str, limit: int = 50):
