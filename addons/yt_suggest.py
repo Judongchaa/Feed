@@ -7,9 +7,11 @@ from textual.app import ComposeResult
 import yt_dlp
 import logging
 logger = logging.getLogger("yt_suggest")
+_logger_setup_done = False
 
 def _setup_logger():
-    if not getattr(logger, "setup_done", False):
+    global _logger_setup_done
+    if not _logger_setup_done:
         from core.addon_manager import manager
         addon_config = manager.addons_config.get("yt_suggest", {})
         if addon_config.get("logging", False):
@@ -19,7 +21,7 @@ def _setup_logger():
             logger.addHandler(fh)
         else:
             logger.addHandler(logging.NullHandler())
-        logger.setup_done = True
+        _logger_setup_done = True
 
 def get_db_path(data_dir: str, tag: str, subtag: str) -> Path:
     target_dir = Path(data_dir) / tag
@@ -117,42 +119,43 @@ def update_feeds(data_dir: str, tag: str, subtag: str) -> int:
     logger.info(f"Starting YouTube suggestions fetch using browser: {browser}")
 
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            result = ydl.extract_info("https://www.youtube.com/", download=False)
-            
-            entries = result.get('entries', [])
-            for entry in entries:
-                if not entry: continue
-                try:
-                    title = entry.get('title', 'Unknown Title')
-                    url = entry.get('url', '')
-                    uploader = entry.get('uploader')
+        ydl = yt_dlp.YoutubeDL(ydl_opts)
+        result = ydl.extract_info("https://www.youtube.com/", download=False)
+        
+        entries = result.get('entries', [])
+        for entry in entries:
+            if not entry: continue
+            url = ""
+            try:
+                title = entry.get('title', 'Unknown Title')
+                url = entry.get('url', '')
+                uploader = entry.get('uploader')
+                
+                if not url: continue
                     
-                    if not url: continue
-                    
-                    if not uploader:
-                        # Use oEmbed to fetch the channel name quickly since flat extraction often skips it
-                        try:
-                            req_url = f"https://www.youtube.com/oembed?url={url}&format=json"
-                            with urllib.request.urlopen(req_url) as response:
-                                oembed_data = json.loads(response.read().decode())
-                                uploader = oembed_data.get('author_name')
-                        except Exception as e:
-                            logger.debug(f"oEmbed fetch failed for {url}: {e}")
-                            
-                    if not uploader:
-                        uploader = 'YouTube'
-                    
-                    # Check if exists
-                    c.execute("SELECT id FROM entries WHERE url = ?", (url,))
-                    if not c.fetchone():
-                        c.execute('''
-                            INSERT INTO entries (feed_name, title, url, date, sort_date)
-                            VALUES (?, ?, ?, ?, ?)
-                        ''', (uploader, title, url, formatted_date, sort_date))
-                        new_count += 1
-                except Exception as e:
-                    logger.error(f"Error parsing entry {url}: {e}")
+                if not uploader:
+                    # Use oEmbed to fetch the channel name quickly since flat extraction often skips it
+                    try:
+                        req_url = f"https://www.youtube.com/oembed?url={url}&format=json"
+                        with urllib.request.urlopen(req_url) as response:
+                            oembed_data = json.loads(response.read().decode())
+                            uploader = oembed_data.get('author_name')
+                    except Exception as e:
+                        logger.debug(f"oEmbed fetch failed for {url}: {e}")
+                        
+                if not uploader:
+                    uploader = 'YouTube'
+                
+                # Check if exists
+                c.execute("SELECT id FROM entries WHERE url = ?", (url,))
+                if not c.fetchone():
+                    c.execute('''
+                        INSERT INTO entries (feed_name, title, url, date, sort_date)
+                        VALUES (?, ?, ?, ?, ?)
+                    ''', (uploader, title, url, formatted_date, sort_date))
+                    new_count += 1
+            except Exception as e:
+                logger.error(f"Error parsing entry {url}: {e}")
     except Exception as e:
         logger.error(f"Error fetching YouTube suggestions: {e}")
         print(f"Error fetching YouTube suggestions: {e}")
