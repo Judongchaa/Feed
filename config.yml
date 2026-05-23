@@ -142,3 +142,24 @@ feeds:
     url: https://www.youtube.com/feeds/videos.xml?playlist_id=UULFv9mVb-ptWuKznMUu1yZb_g
     subtag: Arte
     tag: "Youtube"
+
+  - name: UltimaOra
+    url:  https://t.me/s/ultimora24
+    subtag: News
+    tag: Telegram
+  - name: PolMemes
+    url:  https://t.me/s/PoliticalMemes
+    subtag: Memes
+    tag: Telegram
+  - name: WorstTimeline
+    url: https://t.me/s/bestimeline
+    subtag: Memes
+    tag: Telegram
+  - name: Tartaruga
+    url: https://t.me/s/turtleroad
+    subtag: News
+    tag: Telegram
+  - name: UltimaPolitcs
+    url: https://t.me/s/ultimorapolitics
+    subtag: News
+    tag: Telegram

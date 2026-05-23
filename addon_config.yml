@@ -10,5 +10,11 @@ addons:
       - "News/World"
   yt_suggest:
     enabled: true
+    logging: false
+    browser: "firefox"
     tags:
       - "Youtube/Suggestions"
+  telegram:
+    enabled: true
+    tags:
+      - "Telegram"
