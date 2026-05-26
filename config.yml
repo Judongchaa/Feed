@@ -33,12 +33,20 @@ feeds:
     tag: "News"
     subtag: "World"
 
-  - name: "IP"
+  - name: "IlPost"
     url: "https://rss.draghetti.it/ilpost.xml"
     tag: "News"
     subtag: "Italy"
-  - name: "LS"
+  - name: "LaStampa"
     url: "https://rss.draghetti.it/lastampa.xml"
+    tag: "News"
+    subtag: Italy
+  - name: "24Eco"
+    url: "https://www.ilsole24ore.com/rss/italia--politica-economica.xml"
+    tag: "News"
+    subtag: Italy
+  - name: "24Fin"
+    url: "https://www.ilsole24ore.com/rss/finanza.xml"
     tag: "News"
     subtag: Italy
 

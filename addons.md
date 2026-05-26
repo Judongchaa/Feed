@@ -6,7 +6,7 @@ By default, the app saves feed entries as individual Markdown files and opens th
 
 ## 1. Registering an Addon
 
-Addons are enabled and assigned to specific tags via the `addon_config.yml` file located in the root directory.
+Addons are enabled and assigned to specific tags or feed names via the `addon_config.yml` file located in the root directory.
 
 ```yaml
 addons:
@@ -15,7 +15,12 @@ addons:
     tags: 
       - "CustomTag1"
       - "CustomTag2"
+    feed_names:
+      - "My Feed Name"
 ```
+
+> [!NOTE]
+> When assigning addons, `feed_names` has the highest priority. If an addon is registered for a specific feed name, it will always take precedence over an addon registered for that feed's `tag` or `subtag`.
 
 ## 2. Creating an Addon Module
 

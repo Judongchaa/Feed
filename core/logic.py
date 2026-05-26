@@ -19,8 +19,8 @@ def sanitize_filename(name: str) -> str:
     return slugify(name)
 
 def save_entry(entry: dict, feed_config: FeedConfig, data_dir: str) -> bool:
-    # Check if an addon handles this tag
-    addon = addon_manager.get_addon_for_tag(feed_config.tag, feed_config.subtag)
+    # Check if an addon handles this tag or feed name
+    addon = addon_manager.get_addon(feed_config.name, feed_config.tag, feed_config.subtag)
     if addon and hasattr(addon, 'save_entry'):
         return addon.save_entry(entry, feed_config, data_dir)
 

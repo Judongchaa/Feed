@@ -11,8 +11,9 @@ class LoadMoreItem(ListItem):
 class ArticleItem(ListItem):
     """An item in the article list."""
     SOURCE_COLORS = [
-        "#ff5555", "#50fa7b", "#f1fa8c", "#bd93f9", "#ff79c6",
-        "#8be9fd", "#ffb86c", "#ff9580", "#9580ff", "#80ffea"
+        "#ff6666", "#ffcc00", "#66ff66", "#66ccff", "#cc66ff",
+        "#ff66cc", "#00ffff", "#ff9933", "#99ff33", "#3399ff",
+        "#ffb366", "#b366ff", "#66ffb3", "#ff6699", "#e6e600"
     ]
 
     def __init__(self, path: Path):

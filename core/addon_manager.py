@@ -10,6 +10,7 @@ class AddonManager:
         self.addons_config = {}
         self.addons = {}
         self.tag_to_addon = {}
+        self.feed_name_to_addon = {}
         self.load_config()
         self.load_addons()
 
@@ -41,6 +42,19 @@ class AddonManager:
                     
                     for tag in config.get("tags", []):
                         self.tag_to_addon[tag] = module
+                        
+                    for feed_name in config.get("feed_names", []):
+                        self.feed_name_to_addon[feed_name] = module
+
+    def get_addon(self, feed_name: str, tag: str, subtag: str = ""):
+        if feed_name in self.feed_name_to_addon:
+            return self.feed_name_to_addon[feed_name]
+            
+        if subtag:
+            addon = self.tag_to_addon.get(f"{tag}/{subtag}")
+            if addon:
+                return addon
+        return self.tag_to_addon.get(tag)
 
     def get_addon_for_tag(self, tag: str, subtag: str = ""):
         if subtag:

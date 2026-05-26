@@ -18,3 +18,8 @@ addons:
     enabled: true
     tags:
       - "Telegram"
+  ilsole24ore:
+    enabled: true
+    feed_names:
+      - "24Eco"
+      - "24Fin"

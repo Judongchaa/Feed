@@ -1,0 +1,2 @@
+- addon to save favourite articles and store then i a separate persistent folder
+- addon to autoremove articles after a certain date
